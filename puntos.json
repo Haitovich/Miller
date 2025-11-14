@@ -1,0 +1,16 @@
+[
+  {
+    "nombre": "Parque Metropolitano de Tampico Laguna del Carpintero",
+    "descripcion": "Catedral Metropolitana, punto histórico del centro de la ciudad con arquitectura colonial",
+    "lat": 22.222336,
+    "lng": -97.858409,
+    "color": "#FF6B6B"
+  },
+  {
+    "nombre": "Madero Playa Costera",
+    "descripcion": "Playa Miramar de ciudad Madero",
+    "lat": 22.264310,
+    "lng": -97.786687,
+    "color": "#51CF66"
+  },
+]

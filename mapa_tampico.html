@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Tampico - Puntos de Interés</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <!-- Leaflet MarkerCluster CSS (para agrupar marcadores) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.Default.min.css" />
+    
+    <style>
+        /* Reset y estilos base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
+        }
+
+        html, body, #mapa {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Contenedor principal del mapa */
+        #mapa {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header flotante */
+        .header-flotante {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 500;
+            background: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            max-width: 90%;
+        }
+
+        .header-flotante h1 {
+            font-size: 1.4em;
+            color: #333;
+            margin: 0;
+        }
+
+        .header-flotante p {
+            font-size: 0.85em;
+            color: #666;
+            margin: 2px 0 0 0;
+        }
+
+        /* Panel lateral - Formulario */
+        .panel-lateral {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 400;
+            max-height: 85vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 12px 12px 0 0;
+            font-weight: bold;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-contenido {
+            padding: 16px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .formulario-grupo {
+            margin-bottom: 14px;
+        }
+
+        .formulario-grupo label {
+            display: block;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #333;
+        }
+
+        .formulario-grupo input,
+        .formulario-grupo textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.95em;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .formulario-grupo input:focus,
+        .formulario-grupo textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .formulario-grupo textarea {
+            resize: vertical;
+            min-height: 60px;
+            max-height: 100px;
+        }
+
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-picker-container input[type="color"] {
+            width: 50px;
+            height: 40px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .color-picker-container input[type="text"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .botones {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primario {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primario:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primario:active {
+            transform: translateY(0);
+        }
+
+        .btn-secundario {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secundario:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-exportar {
+            width: 100%;
+            background: #4CAF50;
+            color: white;
+            margin-top: 12px;
+        }
+
+        .btn-exportar:hover {
+            background: #45a049;
+        }
+
+        /* Mensaje de estado */
+        .mensaje {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            z-index: 400;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 500;
+            animation: slideIn 0.3s ease, slideOut 0.3s ease 3.7s;
+            max-width: 300px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+        }
+
+        .mensaje-exito {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .mensaje-error {
+            background: #f44336;
+            color: white;
+        }
+
+        .mensaje-info {
+            background: #2196F3;
+            color: white;
+        }
+
+        /* Botón para abrir/cerrar panel */
+        .toggle-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 360px;
+            z-index: 400;
+            background: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            transition: all 0.3s;
+        }
+
+        .toggle-panel:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transform: scale(1.1);
+        }
+
+        .toggle-panel.hidden {
+            display: none;
+        }
+
+        /* Lista de puntos en el panel */
+        .puntos-lista {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .puntos-lista-titulo {
+            font-weight: 600;
+            font-size: 0.95em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .punto-item {
+            padding: 8px;
+            margin-bottom: 8px;
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .punto-item:hover {
+            background: #f0f0f0;
+            transform: translateX(4px);
+        }
+
+        .punto-item-nombre {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 2px;
+        }
+
+        .punto-item-coords {
+            color: #666;
+            font-size: 0.8em;
+            margin-bottom: 4px;
+        }
+
+        .punto-item-btn-eliminar {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            cursor: pointer;
+            float: right;
+        }
+
+        .punto-item-btn-eliminar:hover {
+            background: #ff1744;
+        }
+
+        /* Popup personalizado de Leaflet */
+        .leaflet-popup-content-wrapper {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            font-size: 0.95em;
+        }
+
+        .leaflet-popup-content {
+            margin: 0;
+            width: 100% !important;
+        }
+
+        .leaflet-popup-content-wrapper a {
+            color: #667eea;
+        }
+
+        .leaflet-container a.leaflet-popup-close-button {
+            color: #666;
+        }
+
+        .leaflet-popup-tip {
+            background: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-flotante {
+                top: 5px;
+                padding: 10px 15px;
+            }
+
+            .header-flotante h1 {
+                font-size: 1.1em;
+            }
+
+            .header-flotante p {
+                font-size: 0.75em;
+            }
+
+            .panel-lateral {
+                width: calc(100% - 40px);
+                right: 20px;
+                bottom: 20px;
+                max-height: 50vh;
+            }
+
+            .toggle-panel {
+                right: 20px;
+                bottom: calc(50vh + 40px);
+            }
+
+            .toggle-panel.hidden {
+                display: flex;
+            }
+
+            .panel-lateral.cerrado {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-flotante {
+                top: 5px;
+                left: 10px;
+                right: 10px;
+                transform: none;
+                max-width: none;
+            }
+
+            .panel-lateral {
+                width: calc(100% - 20px);
+                right: 10px;
+                left: 10px;
+                bottom: 10px;
+                max-height: 45vh;
+            }
+
+            .toggle-panel {
+                right: 10px;
+                bottom: auto;
+                top: 10px;
+            }
+
+            .formulario-grupo textarea {
+                min-height: 50px;
+                max-height: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mapa Leaflet -->
+    <div id="mapa"></div>
+
+    <!-- Header flotante -->
+    <div class="header-flotante">
+        <h1>🗺️ Tampico Maps</h1>
+        <p>Descubre puntos de interés en Tampico, Tamaulipas</p>
+    </div>
+
+    <!-- Botón para abrir/cerrar panel (visible en móvil) -->
+    <button class="toggle-panel hidden" id="togglePanel">➕</button>
+
+    <!-- Panel lateral con formulario -->
+    <div class="panel-lateral" id="panelLateral">
+        <div class="panel-header">
+            ✏️ Agregar Punto de Interés
+        </div>
+        <div class="panel-contenido">
+            <form id="formularioAgregarPunto">
+                <!-- Nombre -->
+                <div class="formulario-grupo">
+                    <label for="nombre">Nombre del lugar *</label>
+                    <input 
+                        type="text" 
+                        id="nombre" 
+                        placeholder="Ej: Catedral de Tampico"
+                        required
+                    >
+                </div>
+
+                <!-- Descripción -->
+                <div class="formulario-grupo">
+                    <label for="descripcion">Descripción</label>
+                    <textarea 
+                        id="descripcion" 
+                        placeholder="Describe brevemente el lugar..."
+                    ></textarea>
+                </div>
+
+                <!-- Latitud -->
+                <div class="formulario-grupo">
+                    <label for="latitud">Latitud (-90 a 90) *</label>
+                    <input 
+                        type="number" 
+                        id="latitud" 
+                        placeholder="22.2719"
+                        step="0.00001"
+                        min="-90"
+                        max="90"
+                        required
+                    >
+                </div>
+
+                <!-- Longitud -->
+                <div class="formulario-grupo">
+                    <label for="longitud">Longitud (-180 a 180) *</label>
+                    <input 
+                        type="number" 
+                        id="longitud" 
+                        placeholder="-97.8611"
+                        step="0.00001"
+                        min="-180"
+                        max="180"
+                        required
+                    >
+                </div>
+
+                <!-- Color -->
+                <div class="formulario-grupo">
+                    <label for="color">Color del marcador</label>
+                    <div class="color-picker-container">
+                        <input 
+                            type="color" 
+                            id="colorPicker" 
+                            value="#667eea"
+                        >
+                        <input 
+                            type="text" 
+                            id="color" 
+                            placeholder="#667eea"
+                            value="#667eea"
+                        >
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div class="botones">
+                    <button type="submit" class="btn-primario">Agregar Punto</button>
+                    <button type="reset" class="btn-secundario">Limpiar</button>
+                </div>
+
+                <!-- Botón exportar -->
+                <button type="button" class="btn-exportar" id="btnExportar">📥 Exportar JSON</button>
+            </form>
+
+            <!-- Lista de puntos agregados -->
+            <div class="puntos-lista" id="puntosList">
+                <div class="puntos-lista-titulo">Puntos en el mapa</div>
+                <div id="listaPuntosContenido" style="max-height: 200px; overflow-y: auto;">
+                    <p style="color: #999; font-size: 0.85em;">Cargando puntos...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensaje flotante -->
+    <div id="mensajeFlotante"></div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <!-- Leaflet MarkerCluster JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/leaflet.markercluster.min.js"></script>
+
+    <script>
+        // ============================================
+        // DATOS Y CONFIGURACIÓN
+        // ============================================
+        
+        // Coordenadas centro de Tampico
+        const TAMPICO_COORDS = [22.2719142, -97.8610973];
+        const ZOOM_INICIAL = 13;
+
+        // Puntos de ejemplo (se pueden cargar desde puntos.json)
+        let puntos = [
+            {
+                nombre: "Catedral de Tampico",
+                descripcion: "Catedral Metropolitana, punto histórico del centro de la ciudad",
+                lat: 22.2742,
+                lng: -97.8605,
+                color: "#FF6B6B"
+            },
+            {
+                nombre: "Parque Reforma",
+                descripcion: "Parque público con áreas verdes y espacios recreativos",
+                lat: 22.2750,
+                lng: -97.8630,
+                color: "#51CF66"
+            },
+            {
+                nombre: "Museo de Arte",
+                descripcion: "Museo con colecciones de arte contemporáneo y clásico",
+                lat: 22.2700,
+                lng: -97.8550,
+                color: "#4ECDC4"
+            },
+            {
+                nombre: "Puerto de Tampico",
+                descripcion: "Puerto comercial importante de la región",
+                lat: 22.2685,
+                lng: -97.8780,
+                color: "#3498DB"
+            },
+            {
+                nombre: "Playa Miramar",
+                descripcion: "Playa pública con servicios y resorts",
+                lat: 22.2900,
+                lng: -97.8500,
+                color: "#9B59B6"
+            }
+        ];
+
+        // Variables del mapa
+        let mapa;
+        let grupoMarcadores;
+        let marcadoresActuales = new Map(); // Guardar referencias a marcadores
+
+        // ============================================
+        // INICIALIZACIÓN
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            inicializarMapa();
+            cargarPuntos();
+            configurarFormulario();
+            sincronizarColorPicker();
+            configurarResponsive();
+        });
+
+        // ============================================
+        // FUNCIONES DEL MAPA
+        // ============================================
+
+        function inicializarMapa() {
+            // Crear mapa
+            mapa = L.map('mapa').setView(TAMPICO_COORDS, ZOOM_INICIAL);
+
+            // Agregar tiles (capas de mapa)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+                maxZoom: 19,
+                minZoom: 10
+            }).addTo(mapa);
+
+            // Alternativa: CartoDB
+            // L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            //     attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> | &copy; <a href="https://carto.com/">CartoDB</a>',
+            //     maxZoom: 19
+            // }).addTo(mapa);
+
+            // Inicializar grupo de marcadores para clustering
+            grupoMarcadores = L.markerClusterGroup();
+            mapa.addLayer(grupoMarcadores);
+
+            // Marcador del centro
+            crearMarcador({
+                nombre: "📍 Centro de Tampico",
+                descripcion: "Coordenadas: 22.2719, -97.8611",
+                lat: TAMPICO_COORDS[0],
+                lng: TAMPICO_COORDS[1],
+                color: "#2C3E50",
+                esMarker: true
+            });
+        }
+
+        function crearMarcador(punto, conPopup = true) {
+            const { nombre, descripcion, lat, lng, color = "#667eea" } = punto;
+
+            // Crear icono personalizado con SVG
+            const svgIcon = crearSVGIcon(color);
+            const miIcono = L.divIcon({
+                html: svgIcon,
+                iconSize: [40, 40],
+                iconAnchor: [20, 40],
+                popupAnchor: [0, -40],
+                className: 'leaflet-div-icon'
+            });
+
+            // Crear marcador
+            const marcador = L.marker([lat, lng], { icon: miIcono });
+
+            // Agregar popup
+            if (conPopup) {
+                const popupHTML = `
+                    <div style="min-width: 200px;">
+                        <strong style="font-size: 1.1em; color: #333;">${escaparHTML(nombre)}</strong><br>
+                        <span style="color: #666; font-size: 0.9em;">${escaparHTML(descripcion || 'Sin descripción')}</span><br>
+                        <small style="color: #999;">Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}</small>
+                    </div>
+                `;
+                marcador.bindPopup(popupHTML);
+            }
+
+            // Agregar tooltip (emergente al pasar cursor)
+            marcador.bindTooltip(nombre, { permanent: false, direction: 'top', offset: [0, -10] });
+
+            // Agregar al grupo de marcadores
+            grupoMarcadores.addLayer(marcador);
+
+            // Guardar referencia
+            marcadoresActuales.set(nombre + lat + lng, marcador);
+
+            return marcador;
+        }
+
+        function crearSVGIcon(color) {
+            return `
+                <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="20" cy="20" r="18" fill="${color}" stroke="white" stroke-width="2"/>
+                    <circle cx="20" cy="20" r="14" fill="${color}" opacity="0.3"/>
+                    <circle cx="20" cy="20" r="6" fill="white"/>
+                </svg>
+            `;
+        }
+
+        function escaparHTML(texto) {
+            const div = document.createElement('div');
+            div.textContent = texto;
+            return div.innerHTML;
+        }
+
+        // ============================================
+        // GESTIÓN DE PUNTOS
+        // ============================================
+
+        function cargarPuntos() {
+            // Intentar cargar desde puntos.json
+            fetch('puntos.json')
+                .then(response => response.json())
+                .then(data => {
+                    puntos = data;
+                    dibujarPuntos();
+                    mostrarMensaje('Puntos cargados desde archivo', 'info');
+                })
+                .catch(error => {
+                    console.log('No se encontró puntos.json, usando datos embebidos');
+                    dibujarPuntos();
+                });
+        }
+
+        function dibujarPuntos() {
+            grupoMarcadores.clearLayers();
+            
+            // Redibujar marcador del centro
+            crearMarcador({
+                nombre: "📍 Centro de Tampico",
+                descripcion: "Coordenadas: 22.2719, -97.8611",
+                lat: TAMPICO_COORDS[0],
+                lng: TAMPICO_COORDS[1],
+                color: "#2C3E50"
+            });
+
+            // Dibujar puntos
+            puntos.forEach(punto => {
+                crearMarcador(punto);
+            });
+
+            // Actualizar lista
+            actualizarListaPuntos();
+        }
+
+        function agregarPunto(nombre, descripcion, lat, lng, color) {
+            // Validar
+            if (!validarCoordenadas(lat, lng)) {
+                mostrarMensaje('Coordenadas inválidas', 'error');
+                return false;
+            }
+
+            if (!validarColor(color)) {
+                mostrarMensaje('Color HEX inválido', 'error');
+                return false;
+            }
+
+            // Crear objeto punto
+            const nuevoPunto = {
+                nombre: nombre.trim(),
+                descripcion: descripcion.trim(),
+                lat: parseFloat(lat),
+                lng: parseFloat(lng),
+                color: color
+            };
+
+            // Agregar al array
+            puntos.push(nuevoPunto);
+
+            // Dibujar en mapa
+            crearMarcador(nuevoPunto);
+
+            // Centrar en el nuevo punto
+            mapa.setView([lat, lng], 15);
+
+            // Actualizar lista
+            actualizarListaPuntos();
+
+            // Guardar en localStorage
+            guardarEnLocalStorage();
+
+            mostrarMensaje(`✓ "${nombre}" agregado correctamente`, 'exito');
+            return true;
+        }
+
+        function eliminarPunto(indice) {
+            const punto = puntos[indice];
+            if (punto) {
+                puntos.splice(indice, 1);
+                dibujarPuntos();
+                guardarEnLocalStorage();
+                mostrarMensaje(`✓ Punto eliminado`, 'exito');
+            }
+        }
+
+        function actualizarListaPuntos() {
+            const contenido = document.getElementById('listaPuntosContenido');
+            
+            if (puntos.length === 0) {
+                contenido.innerHTML = '<p style="color: #999; font-size: 0.85em;">No hay puntos agregados</p>';
+                return;
+            }
+
+            let html = '';
+            puntos.forEach((punto, indice) => {
+                html += `
+                    <div class="punto-item" onclick="centrarEnPunto(${punto.lat}, ${punto.lng})">
+                        <div class="punto-item-nombre">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: ${punto.color}; border-radius: 2px; margin-right: 6px; vertical-align: middle;"></span>
+                            ${punto.nombre}
+                        </div>
+                        <div class="punto-item-coords">
+                            ${punto.lat.toFixed(4)}, ${punto.lng.toFixed(4)}
+                        </div>
+                        <button class="punto-item-btn-eliminar" onclick="eliminarPunto(${indice}); event.stopPropagation();">Eliminar</button>
+                        <div style="clear: both;"></div>
+                    </div>
+                `;
+            });
+
+            contenido.innerHTML = html;
+        }
+
+        function centrarEnPunto(lat, lng) {
+            mapa.setView([lat, lng], 16);
+        }
+
+        // ============================================
+        // VALIDACIONES
+        // ============================================
+
+        function validarCoordenadas(lat, lng) {
+            lat = parseFloat(lat);
+            lng = parseFloat(lng);
+            return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+        }
+
+        function validarColor(color) {
+            const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+            return hexRegex.test(color);
+        }
+
+        // ============================================
+        // FORMULARIO
+        // ============================================
+
+        function configurarFormulario() {
+            const formulario = document.getElementById('formularioAgregarPunto');
+            
+            formulario.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const nombre = document.getElementById('nombre').value;
+                const descripcion = document.getElementById('descripcion').value;
+                const latitud = document.getElementById('latitud').value;
+                const longitud = document.getElementById('longitud').value;
+                const color = document.getElementById('color').value;
+
+                if (agregarPunto(nombre, descripcion, latitud, longitud, color)) {
+                    formulario.reset();
+                    document.getElementById('colorPicker').value = '#667eea';
+                    document.getElementById('color').value = '#667eea';
+                }
+            });
+
+            // Botón exportar
+            document.getElementById('btnExportar').addEventListener('click', exportarJSON);
+        }
+
+        function sincronizarColorPicker() {
+            const colorPicker = document.getElementById('colorPicker');
+            const colorInput = document.getElementById('color');
+
+            colorPicker.addEventListener('input', (e) => {
+                colorInput.value = e.target.value;
+            });
+
+            colorInput.addEventListener('input', (e) => {
+                if (validarColor(e.target.value)) {
+                    colorPicker.value = e.target.value;
+                }
+            });
+        }
+
+        // ============================================
+        // EXPORTAR / IMPORTAR
+        // ============================================
+
+        function exportarJSON() {
+            const dataStr = JSON.stringify(puntos, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'puntos_export.json';
+            link.click();
+            URL.revokeObjectURL(url);
+
+            mostrarMensaje('✓ Puntos exportados a puntos_export.json', 'exito');
+        }
+
+        function guardarEnLocalStorage() {
+            try {
+                localStorage.setItem('tampico_puntos', JSON.stringify(puntos));
+            } catch (e) {
+                console.warn('No se pudo guardar en localStorage:', e);
+            }
+        }
+
+        function cargarDelLocalStorage() {
+            try {
+                const guardados = localStorage.getItem('tampico_puntos');
+                if (guardados) {
+                    puntos = JSON.parse(guardados);
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Error cargando de localStorage:', e);
+            }
+            return false;
+        }
+
+        // ============================================
+        // UI / UX
+        // ============================================
+
+        function mostrarMensaje(texto, tipo = 'info') {
+            const container = document.getElementById('mensajeFlotante');
+            const div = document.createElement('div');
+            div.className = `mensaje mensaje-${tipo}`;
+            div.textContent = texto;
+            container.appendChild(div);
+
+            setTimeout(() => {
+                div.remove();
+            }, 4000);
+        }
+
+        function configurarResponsive() {
+            const toggleBtn = document.getElementById('togglePanel');
+            const panel = document.getElementById('panelLateral');
+
+            toggleBtn.addEventListener('click', () => {
+                panel.classList.toggle('cerrado');
+            });
+
+            // Auto-mostrar panel en desktop
+            if (window.innerWidth > 768) {
+                panel.classList.remove('cerrado');
+            } else {
+                panel.classList.add('cerrado');
+                toggleBtn.classList.remove('hidden');
+            }
+
+            // Escuchar cambios de tamaño
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 768) {
+                    panel.classList.remove('cerrado');
+                    toggleBtn.classList.add('hidden');
+                } else {
+                    toggleBtn.classList.remove('hidden');
+                }
+            });
+        }
+
+        // ============================================
+        // SCRIPT DE INICIO
+        // ============================================
+
+        // Intentar cargar del localStorage primero
+        if (!cargarDelLocalStorage()) {
+            console.log('Usando puntos por defecto');
+        }
+    </script>
+</body>
+</html>
