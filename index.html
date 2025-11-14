@@ -559,44 +559,9 @@
         const TAMPICO_COORDS = [22.2719142, -97.8610973];
         const ZOOM_INICIAL = 13;
 
-        // Puntos de ejemplo (se pueden cargar desde puntos.json)
-        let puntos = [
-            {
-                nombre: "Catedral de Tampico",
-                descripcion: "Catedral Metropolitana, punto histórico del centro de la ciudad",
-                lat: 22.2742,
-                lng: -97.8605,
-                color: "#FF6B6B"
-            },
-            {
-                nombre: "Parque Reforma",
-                descripcion: "Parque público con áreas verdes y espacios recreativos",
-                lat: 22.2750,
-                lng: -97.8630,
-                color: "#51CF66"
-            },
-            {
-                nombre: "Museo de Arte",
-                descripcion: "Museo con colecciones de arte contemporáneo y clásico",
-                lat: 22.2700,
-                lng: -97.8550,
-                color: "#4ECDC4"
-            },
-            {
-                nombre: "Puerto de Tampico",
-                descripcion: "Puerto comercial importante de la región",
-                lat: 22.2685,
-                lng: -97.8780,
-                color: "#3498DB"
-            },
-            {
-                nombre: "Playa Miramar",
-                descripcion: "Playa pública con servicios y resorts",
-                lat: 22.2900,
-                lng: -97.8500,
-                color: "#9B59B6"
-            }
-        ];
+        // Lista de puntos — se cargará exclusivamente desde `puntos.json`
+        // El array hardcodeado fue removido para usar únicamente los datos externos.
+        let puntos = [];
 
         // Variables del mapa
         let mapa;
@@ -712,17 +677,28 @@
         // ============================================
 
         function cargarPuntos() {
-            // Intentar cargar desde puntos.json
+            // Cargar exclusivamente desde puntos.json
             fetch('puntos.json')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.json();
+                })
                 .then(data => {
-                    puntos = data;
+                    // Esperamos un array de puntos en el archivo JSON
+                    if (Array.isArray(data)) {
+                        puntos = data;
+                    } else {
+                        puntos = [];
+                        console.warn('puntos.json no contiene un array, usando lista vacía');
+                    }
                     dibujarPuntos();
-                    mostrarMensaje('Puntos cargados desde archivo', 'info');
+                    mostrarMensaje('Puntos cargados desde puntos.json', 'info');
                 })
                 .catch(error => {
-                    console.log('No se encontró puntos.json, usando datos embebidos');
+                    console.error('No se pudo cargar puntos.json:', error);
+                    puntos = [];
                     dibujarPuntos();
+                    mostrarMensaje('No se pudo cargar puntos.json. No hay puntos disponibles.', 'error');
                 });
         }
 
@@ -971,10 +947,7 @@
         // SCRIPT DE INICIO
         // ============================================
 
-        // Intentar cargar del localStorage primero
-        if (!cargarDelLocalStorage()) {
-            console.log('Usando puntos por defecto');
-        }
+        // Los puntos se cargan desde puntos.json en lugar de usar valores embebidos o carga automática desde localStorage.
     </script>
 </body>
 </html>
